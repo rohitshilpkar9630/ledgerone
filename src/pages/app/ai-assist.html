@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>LedgerOne — AI Assist</title>
+  <link rel="stylesheet" href="../../css/theme.css"/>
+  <style>
+    :root{--sidebar-w:240px}
+    body{margin:0;display:flex;min-height:100vh;background:linear-gradient(180deg,#080a0c,#0e1217);color:var(--text);font-family:Inter,system-ui}
+    .sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:#090c10;padding:20px;display:flex;flex-direction:column;gap:20px;box-shadow:4px 0 20px rgba(0,0,0,0.5)}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:18px}
+    .nav{display:flex;flex-direction:column;gap:8px}
+    .nav a{display:flex;align-items:center;gap:10px;color:#9fb1cb;text-decoration:none;padding:10px;border-radius:10px}
+    .nav a.active,.nav a:hover{background:linear-gradient(90deg,rgba(255,176,32,0.08),transparent);color:var(--text)}
+    .main{flex:1;padding:22px 28px;overflow:auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+    h1{margin:0;color:var(--accent)}
+    .panel{background:var(--card);border:var(--glass-border);padding:16px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .kpi-card{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+    .kpi-label{font-size:13px;color:var(--muted)}
+    .kpi-value{font-size:18px;font-weight:700;margin-top:6px}
+    .layout{display:grid;grid-template-columns:2fr 360px;gap:18px;margin-top:16px}
+    .chat-area{display:flex;flex-direction:column;height:640px}
+    .messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent)}
+    .msg{max-width:78%;padding:10px;border-radius:10px;line-height:1.3}
+    .msg.ai{align-self:flex-start;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+    .msg.user{align-self:flex-end;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#070707}
+    .input-row{display:flex;gap:10px;margin-top:10px}
+    textarea{flex:1;min-height:70px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);resize:vertical}
+    .btn{padding:10px 12px;border-radius:10px;border:none;font-weight:600;cursor:pointer}
+    .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#0b0b0b;box-shadow:0 6px 20px rgba(255,176,32,0.12)}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.05);color:var(--text)}
+    .quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .small{font-size:13px;color:var(--muted)}
+    .right-col .panel{margin-bottom:12px}
+    @media(max-width:980px){ .layout{grid-template-columns:1fr} .right-col{display:none} .kpis{grid-template-columns:repeat(2,1fr)} .messages{height:360px} }
+  </style>
+</head>
+<body>
+  <!-- Sidebar (matches other pages) -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🤖</div>
+      <div>
+        <div style="font-weight:700;color:var(--accent)">LedgerOne</div>
+        <div style="font-size:12px;color:var(--muted)">AI Assist</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="./dashboard.html">🏠 Dashboard</a>
+      <a href="./inventory.html">📦 Inventory</a>
+      <a href="./customers.html">👥 Customers</a>
+      <a href="./suppliers.html">🏭 Suppliers</a>
+      <a href="./finance.html">💰 Finance</a>
+      <a href="./ai-assist.html" class="active">🤖 AI Assist</a>
+      <a href="./settings.html">⚙️ Settings</a>
+    </nav>
+
+    <button id="btnLogout" class="btn ghost" style="margin-top:auto">Logout</button>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>AI Assist</h1>
+        <div class="small">Ask questions, generate restock plans, or get a quick business summary.</div>
+      </div>
+      <div style="text-align:right">
+        <div class="small">Signed in as</div>
+        <div id="userEmail" style="font-weight:700">—</div>
+      </div>
+    </div>
+
+    <!-- KPI row (same style as dashboard) -->
+    <section class="kpis">
+      <div class="panel kpi-card"><div class="kpi-label">Revenue (MTD)</div><div id="aiRevenue" class="kpi-value">₹0</div></div>
+      <div class="panel kpi-card"><div class="kpi-label">Profit / Loss</div><div id="aiProfit" class="kpi-value">₹0</div></div>
+      <div class="panel kpi-card"><div class="kpi-label">Pending Bills</div><div id="aiPending" class="kpi-value">0</div></div>
+      <div class="panel kpi-card"><div class="kpi-label">Low Stock Items</div><div id="aiLow" class="kpi-value">0</div></div>
+    </section>
+
+    <div class="layout">
+      <!-- Left: chat -->
+      <div class="panel chat-area">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-weight:700">Jarvis — LedgerOne Assistant</div>
+          <div class="small">Keep your questions short and actionable</div>
+        </div>
+
+        <div class="quick-actions">
+          <button id="btnSummary" class="btn ghost">Summarize today</button>
+          <button id="btnLow" class="btn ghost">Low stock items</button>
+          <button id="btnPending" class="btn ghost">Pending bills</button>
+          <button id="btnRestock" class="btn ghost">Create restock plan</button>
+        </div>
+
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-atomic="false"></div>
+
+        <div class="input-row" style="margin-top:12px">
+          <textarea id="userInput" placeholder="Ask about sales, stock, suppliers or finance... (Shift+Enter for newline)"></textarea>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button id="sendBtn" class="btn btn-primary">Send</button>
+            <select id="modelSelect" class="ghost" style="width:120px;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)">
+              <option value="openai-gpt-4o-mini">gpt-4o-mini</option>
+              <option value="openai-gpt-4o">gpt-4o</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: tips & settings -->
+      <aside class="right-col">
+        <div class="panel">
+          <div style="font-weight:700">Tips & Prompts</div>
+          <div class="small" style="margin-top:8px">
+            • "Show today's revenue and profit"<br/>
+            • "Which products to reorder?"<br/>
+            • "Suggest 3 suppliers for restock"<br/>
+            • "Create a quick 7-day restock plan"
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="font-weight:700">AI Settings</div>
+          <div class="small" style="margin-top:10px">Max tokens</div>
+          <input id="maxTokens" type="number" value="400" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);margin-top:6px"/>
+          <div style="margin-top:10px" class="small">Model selection and response length</div>
+        </div>
+
+        <div class="panel">
+          <div style="font-weight:700">Recent activity</div>
+          <div id="feed" style="margin-top:8px" class="small">Loading...</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module">
+    import { supabase, getCurrentSession } from '../../js/supabase.js';
+
+    // DOM refs
+    const userEmailEl = document.getElementById('userEmail');
+    const aiRevenue = document.getElementById('aiRevenue');
+    const aiProfit = document.getElementById('aiProfit');
+    const aiPending = document.getElementById('aiPending');
+    const aiLow = document.getElementById('aiLow');
+    const messagesEl = document.getElementById('messages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const modelSelect = document.getElementById('modelSelect');
+    const maxTokens = document.getElementById('maxTokens');
+    const feedEl = document.getElementById('feed');
+
+    const btnSummary = document.getElementById('btnSummary');
+    const btnLow = document.getElementById('btnLow');
+    const btnPending = document.getElementById('btnPending');
+    const btnRestock = document.getElementById('btnRestock');
+    const logoutBtn = document.getElementById('btnLogout');
+
+    // simple conversation store
+    const convo = [];
+
+    // session guard & init
+    (async ()=>{
+      const session = await getCurrentSession();
+      if(!session) {
+        window.location.href = '../../login.html';
+        return;
+      }
+      userEmailEl.textContent = session.user.email;
+      await refreshKPIs();
+      await loadActivityFeed();
+      appendAIMessage('Hi — I can summarize your business, suggest restocks and list pending bills. Try "Summarize today".');
+    })();
+
+    logoutBtn.addEventListener('click', async ()=> {
+      await supabase.auth.signOut();
+      window.location.href='../../login.html';
+    });
+
+    // helpers to append messages
+    function appendUserMessage(text){
+      const el = document.createElement('div');
+      el.className = 'msg user';
+      el.textContent = text;
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+    function appendAIMessage(text){
+      const el = document.createElement('div');
+      el.className = 'msg ai';
+      el.textContent = text;
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+    function setTyping(msg='Thinking...'){
+      const el = document.createElement('div');
+      el.className = 'msg ai';
+      el.textContent = msg;
+      el.dataset.typing = '1';
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return el;
+    }
+
+    // fetch KPIs (MTD) from Supabase
+    async function refreshKPIs(){
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      let revenue=0, expenses=0, pending=0, low=0;
+      try {
+        const { data: invoices } = await supabase.from('invoices').select('total,status,date').gte('date', monthStart);
+        (invoices || []).forEach(i => {
+          if ((i.status||'').toLowerCase() === 'paid') revenue += Number(i.total || 0);
+          else pending += 1;
+        });
+      } catch(e){ /* ignore if table not present */ }
+
+      try {
+        const { data: exp } = await supabase.from('expenses').select('amount,date').gte('date', monthStart);
+        (exp || []).forEach(x => expenses += Number(x.amount || 0));
+      } catch(e){ /* ignore */ }
+
+      try {
+        const { data: products } = await supabase.from('products').select('quantity,reorder');
+        low = (products || []).filter(p => Number(p.quantity||0) <= (p.reorder ?? 5)).length;
+      } catch(e){ /* ignore */ }
+
+      const profit = revenue - expenses;
+      aiRevenue.textContent = '₹' + Math.round(revenue).toLocaleString('en-IN');
+      aiProfit.textContent = '₹' + Math.round(profit).toLocaleString('en-IN');
+      aiPending.textContent = String(pending);
+      aiLow.textContent = String(low);
+      return { revenue, profit, pending, low };
+    }
+
+    // load recent activity (simple)
+    async function loadActivityFeed(){
+      const feed = [
+        '🧾 Invoice #1023 generated',
+        '📦 Product X low stock (2 left)',
+        '💸 ₹2,000 paid to ABC Traders'
+      ];
+      // try to load from activity table if exists
+      try {
+        const { data } = await supabase.from('activity').select('message,created_at').order('created_at',{ascending:false}).limit(6);
+        if (data && data.length) {
+          feed.length = 0;
+          data.forEach(r => feed.push(`${new Date(r.created_at).toLocaleString()} • ${r.message}`));
+        }
+      } catch(e){ /* ignore */ }
+      feedEl.innerHTML = feed.map(f => `<div style="padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);margin-bottom:6px">${f}</div>`).join('');
+    }
+
+    // call serverless AI endpoint (POST /api/ai) — same as earlier design
+    async function callAI(systemPrompt, userPrompt){
+      const typingEl = setTyping('Thinking...');
+      try {
+        const res = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system: systemPrompt,
+            user: userPrompt,
+            model: modelSelect.value,
+            max_tokens: Number(maxTokens.value || 400)
+          })
+        });
+
+        if(!res.ok){
+          const t = await res.text();
+          typingEl.textContent = 'AI error: ' + t;
+          return typingEl;
+        }
+        const { output } = await res.json();
+        typingEl.textContent = '';
+        typingEl.removeAttribute('data-typing');
+        typingEl.textContent = output;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return typingEl;
+      } catch(e){
+        typingEl.textContent = 'Network error contacting AI.';
+        console.error(e);
+        return typingEl;
+      }
+    }
+
+    // build system prompt with KPI context
+    async function buildSystemPrompt(){
+      const k = await refreshKPIs();
+      return `You are LedgerOne Assistant. Keep replies concise and actionable (bullets or short paragraphs). Use the following context:
+Revenue_MTD: ${k.revenue}
+Profit_MTD: ${k.profit}
+Pending_Bills: ${k.pending}
+Low_Stock_Count: ${k.low}
+If asked to make a plan, provide up to 3 clear steps and a single immediate next action.`;
+    }
+
+    // send message
+    async function sendMessage(text){
+      appendUserMessage(text);
+      const system = await buildSystemPrompt();
+      await callAI(system, text);
+      // refresh KPIs & activity after each answer
+      await refreshKPIs();
+      await loadActivityFeed();
+    }
+
+    // quick action bindings
+    btnSummary.addEventListener('click', async ()=> sendMessage('Summarize today: revenue, profit, pending bills, and 1 quick action.'));
+    btnLow.addEventListener('click', async ()=> sendMessage('List low stock products and a short restock suggestion.'));
+    btnPending.addEventListener('click', async ()=> sendMessage('List pending bills and priority for payment.'));
+    btnRestock.addEventListener('click', async ()=> sendMessage('Create a 7-day restock plan for low stock items including priority and quantities.'));
+
+    // send button & Enter handling
+    sendBtn.addEventListener('click', async ()=> {
+      const t = userInput.value.trim();
+      if(!t) return;
+      userInput.value = '';
+      await sendMessage(t);
+    });
+    userInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
+    });
+
+    // small helper (we used getCurrentSession in import)
+    async function getCurrentSession(){ const { data } = await supabase.auth.getSession(); return data?.session ?? null; }
+  </script>
+</body>
+</html>
