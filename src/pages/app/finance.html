@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LedgerOne — Finance</title>
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <style>
+    :root{--sidebar-w:240px}
+    body{margin:0;display:flex;min-height:100vh;background:linear-gradient(180deg,#080a0c,#0e1217);color:var(--text);font-family:Inter,system-ui}
+    .sidebar{width:var(--sidebar-w);background:#090c10;padding:20px;box-shadow:4px 0 20px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:18px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center}
+    .nav a{display:flex;gap:10px;color:#9fb1cb;text-decoration:none;padding:8px;border-radius:8px}
+    .nav a.active{background:linear-gradient(90deg,rgba(255,176,32,0.08),transparent);color:var(--text)}
+    .main{flex:1;padding:22px;overflow:auto}
+    h1{margin:0;color:var(--accent)}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+    .card{background:var(--card);border:var(--glass-border);padding:14px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    .label{font-size:13px;color:var(--muted)}
+    .value{font-weight:700;font-size:18px;margin-top:6px}
+    .content{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px}
+    .chart-card{height:360px;padding:10px}
+    .table{max-height:360px;overflow:auto}
+    button{cursor:pointer}
+    .tools{display:flex;gap:8px;align-items:center}
+    @media(max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)} .content{grid-template-columns:1fr}}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="logo">💰</div>
+      <div><div style="font-weight:700;color:var(--accent)">LedgerOne</div><div style="font-size:12px;color:var(--muted)">Finance</div></div>
+    </div>
+
+    <nav class="nav" style="display:flex;flex-direction:column;gap:6px;margin-top:12px">
+      <a href="./dashboard.html">🏠 Dashboard</a>
+      <a href="./inventory.html">📦 Inventory</a>
+      <a href="./customers.html">👥 Customers</a>
+      <a href="./suppliers.html">🏭 Suppliers</a>
+      <a href="./finance.html" class="active">💰 Finance</a>
+      <a href="./ai-assist.html">🤖 AI Assist</a>
+      <a href="./settings.html">⚙️ Settings</a>
+    </nav>
+
+    <div style="flex:1"></div>
+    <div style="font-size:12px;color:var(--muted)">LedgerOne • Demo</div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Finance Overview</h1>
+        <div style="color:var(--muted);margin-top:6px">Month-to-date summaries, tax and export tools</div>
+      </div>
+      <div class="tools">
+        <label style="color:var(--muted);font-size:13px">Month:</label>
+        <input id="monthPicker" type="month" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text)"/>
+        <button id="btnExport" style="padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#070707;font-weight:700">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="kpis">
+      <div class="card"><div class="label">Revenue (MTD)</div><div id="kRevenue" class="value">₹0</div></div>
+      <div class="card"><div class="label">Purchases (MTD)</div><div id="kPurchases" class="value">₹0</div></div>
+      <div class="card"><div class="label">Expenses (MTD)</div><div id="kExpenses" class="value">₹0</div></div>
+      <div class="card"><div class="label">Profit (MTD)</div><div id="kProfit" class="value">₹0</div></div>
+    </section>
+
+    <div class="content">
+      <div class="card chart-card">
+        <canvas id="financeChart" style="width:100%;height:100%"></canvas>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700">Tax Summary (MTD)</div>
+          <div id="taxTotal" style="color:var(--muted)">—</div>
+        </div>
+
+        <div class="table" style="margin-top:12px">
+          <table style="width:100%">
+            <thead>
+              <tr><th style="text-align:left;color:var(--muted)">Type</th><th style="text-align:right;color:var(--muted)">Amount</th></tr>
+            </thead>
+            <tbody id="taxRows"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Recent transactions</div>
+          <div id="recentList" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { supabase, getCurrentSession } from '../../js/supabase.js';
+
+    // Utilities
+    function fmtINR(n){ return '₹' + (Math.round(n) || 0).toLocaleString('en-IN'); }
+    function q(n){ return Number(n || 0); }
+
+    // DOM
+    const monthPicker = document.getElementById('monthPicker');
+    const kRevenue = document.getElementById('kRevenue');
+    const kPurchases = document.getElementById('kPurchases');
+    const kExpenses = document.getElementById('kExpenses');
+    const kProfit = document.getElementById('kProfit');
+    const taxRows = document.getElementById('taxRows');
+    const taxTotal = document.getElementById('taxTotal');
+    const recentList = document.getElementById('recentList');
+    const btnExport = document.getElementById('btnExport');
+
+    // Chart
+    let financeChart = null;
+    function renderChart(labels, revenueData, expenseData){
+      const ctx = document.getElementById('financeChart').getContext('2d');
+      if(financeChart) financeChart.destroy();
+      financeChart = new Chart(ctx, {
+        type:'line', data: {
+          labels, datasets: [
+            { label:'Revenue', data: revenueData, fill:true, tension:0.3 },
+            { label:'Expenses', data: expenseData, fill:true, tension:0.3 }
+          ]
+        }, options: { responsive:true, plugins:{legend:{position:'bottom'}}}
+      });
+    }
+
+    // Default month -> current month
+    (function setDefaultMonth(){
+      const now = new Date();
+      const m = now.toISOString().slice(0,7);
+      monthPicker.value = m;
+    })();
+
+    // Auth guard: ensure user signed in
+    (async ()=>{
+      const session = await getCurrentSession();
+      if(!session){
+        window.location.href = '../../login.html';
+        return;
+      }
+      // load finance for selected month
+      await loadFinanceForMonth(monthPicker.value);
+    })();
+
+    monthPicker.addEventListener('change', ()=> loadFinanceForMonth(monthPicker.value));
+    btnExport.addEventListener('click', exportCSV);
+
+    // Main function: load KPIs + chart + tax summary + recent
+    async function loadFinanceForMonth(ym /* 'YYYY-MM' */){
+      // compute month start/end
+      const [year, month] = ym.split('-').map(x=>Number(x));
+      const start = new Date(year, month-1, 1).toISOString();
+      const end = new Date(year, month-1 + 1, 1).toISOString();
+
+      // placeholders
+      let revenue = 0, purchases = 0, expenses = 0, taxDetail = { invoicetax:0, expensetax:0 }, pendingCount = 0;
+      let recent = [];
+
+      // 1) Try invoices table (revenue & tax)
+      try {
+        const { data: invoices, error: invErr } = await supabase
+          .from('invoices')
+          .select('id,total,tax,status,date')
+          .gte('date', start)
+          .lt('date', end);
+        if(invErr){ console.warn('invoices fetch error', invErr); }
+        else {
+          invoices.forEach(i=>{
+            const t = q(i.total);
+            if((i.status||'').toLowerCase() === 'paid') revenue += t;
+            else pendingCount += 1;
+            taxDetail.invoicetax += q(i.tax);
+            recent.push({ type:'Invoice', id:i.id, amount:t, date:i.date, status:i.status });
+          });
+        }
+      } catch(e){ console.error('invoices error', e); }
+
+      // 2) Try purchases table (purchases & tax)
+      try {
+        const { data: purchasesRows, error: pErr } = await supabase
+          .from('purchases')
+          .select('id,total,tax,date')
+          .gte('date', start)
+          .lt('date', end);
+        if(pErr){ console.warn('purchases fetch error', pErr); }
+        else {
+          purchasesRows.forEach(p=>{
+            purchases += q(p.total);
+            taxDetail.purchasetax = q(taxDetail.purchasetax || 0) + q(p.tax || 0);
+            recent.push({ type:'Purchase', id:p.id, amount:q(p.total), date:p.date });
+          });
+        }
+      } catch(e){ console.error('purchases error', e); }
+
+      // 3) Try expenses table
+      try {
+        const { data: expensesRows, error: expErr } = await supabase
+          .from('expenses')
+          .select('id,amount,tax,category,date')
+          .gte('date', start)
+          .lt('date', end);
+        if(expErr){ console.warn('expenses fetch error', expErr); }
+        else {
+          expensesRows.forEach(x=>{
+            expenses += q(x.amount);
+            taxDetail.expensetax += q(x.tax);
+            recent.push({ type:'Expense', id:x.id, amount:q(x.amount), date:x.date, category:x.category });
+          });
+        }
+      } catch(e){ console.error('expenses error', e); }
+
+      // 4) profit
+      const profit = revenue - (purchases + expenses);
+
+      // Update KPIs
+      kRevenue.textContent = fmtINR(revenue);
+      kPurchases.textContent = fmtINR(purchases);
+      kExpenses.textContent = fmtINR(expenses);
+      kProfit.textContent = fmtINR(profit);
+
+      // Tax summary
+      const taxItems = [
+        { label:'Invoice Tax', value: taxDetail.invoicetax || 0 },
+        { label:'Purchase Tax', value: taxDetail.purchasetax || 0 },
+        { label:'Expense Tax', value: taxDetail.expensetax || 0 },
+      ];
+      taxRows.innerHTML = taxItems.map(ti=>`<tr><td>${ti.label}</td><td style="text-align:right">${fmtINR(ti.value)}</td></tr>`).join('');
+      taxTotal.textContent = fmtINR((taxDetail.invoicetax||0) + (taxDetail.purchasetax||0) + (taxDetail.expensetax||0));
+
+      // Recent transactions (limit 8, sort desc by date)
+      recent.sort((a,b)=> new Date(b.date) - new Date(a.date));
+      recentList.innerHTML = recent.slice(0,8).map(r=>{
+        const label = r.type + ' ' + (r.id || '');
+        return `<div style="padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);display:flex;justify-content:space-between"><div>${label}</div><div style="font-weight:700">${fmtINR(r.amount)}</div></div>`;
+      }).join('');
+
+      // Chart: prepare weekly points for the month (simpler: weekly buckets)
+      const labels = [];
+      const revData = [];
+      const expData = [];
+      // create 4 buckets for the month
+      for(let wk=0; wk<4; wk++){
+        labels.push(`Week ${wk+1}`);
+        // sum revenue/expenses per week
+        const wkStart = new Date(year, month-1, wk*7 + 1);
+        const wkEnd = new Date(year, month-1, (wk+1)*7 + 1);
+        const revSum = recent.filter(r => r.type==='Invoice' && new Date(r.date) >= wkStart && new Date(r.date) < wkEnd).reduce((s,x)=>s + q(x.amount),0);
+        const expSum = recent.filter(r => (r.type==='Expense' || r.type==='Purchase') && new Date(r.date) >= wkStart && new Date(r.date) < wkEnd).reduce((s,x)=>s + q(x.amount),0);
+        revData.push(revSum); expData.push(expSum);
+      }
+      renderChart(labels, revData, expData);
+    }
+
+    // Export current month transactions to CSV
+    async function exportCSV(){
+      const ym = monthPicker.value;
+      const [y,m] = ym.split('-').map(x=>Number(x));
+      const start = new Date(y, m-1, 1).toISOString();
+      const end = new Date(y, m-1 + 1, 1).toISOString();
+
+      // fetch invoices + expenses
+      const promises = [
+        supabase.from('invoices').select('id,total,tax,status,date').gte('date', start).lt('date', end),
+        supabase.from('expenses').select('id,amount,tax,category,date').gte('date', start).lt('date', end),
+        supabase.from('purchases').select('id,total,tax,date').gte('date', start).lt('date', end)
+      ];
+      const results = await Promise.all(promises);
+      // flatten rows with source tag
+      const rows = [];
+      if(results[0].data) results[0].data.forEach(r => rows.push({ source:'invoice', id:r.id, amount:r.total, tax:r.tax, status:r.status, date:r.date }));
+      if(results[1].data) results[1].data.forEach(r => rows.push({ source:'expense', id:r.id, amount:r.amount, tax:r.tax, category:r.category, date:r.date }));
+      if(results[2].data) results[2].data.forEach(r => rows.push({ source:'purchase', id:r.id, amount:r.total, tax:r.tax, date:r.date }));
+
+      if(rows.length === 0) { alert('No transactions to export for this month.'); return; }
+
+      // CSV build
+      const header = Object.keys(rows[0]);
+      const csv = [header.join(',')].concat(rows.map(r => header.map(h => {
+        let v = r[h];
+        if (v === null || v === undefined) return '';
+        return `"${String(v).replace(/"/g,'""')}"`;
+      }).join(','))).join('\n');
+
+      // download
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `ledgerone_transactions_${ym}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // small helper: pretty INR (rounded)
+    function fmtINR(n){ return '₹' + (Math.round(n) || 0).toLocaleString('en-IN'); }
+
+    // initial load
+    (async ()=> {
+      const now = new Date();
+      const m = now.toISOString().slice(0,7);
+      monthPicker.value = m;
+      await loadFinanceForMonth(monthPicker.value);
+    })();
+
+  </script>
+</body>
+</html>

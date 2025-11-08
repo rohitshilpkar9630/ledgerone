@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>LedgerOne — Suppliers</title>
+  <link rel="stylesheet" href="../../css/theme.css"/>
+  <style>
+    :root{--sidebar-w:240px}
+    body{margin:0;display:flex;min-height:100vh;background:linear-gradient(180deg,#080a0c,#0e1217);color:var(--text);font-family:Inter,system-ui}
+    .sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:#090c10;padding:20px;display:flex;flex-direction:column;gap:20px;box-shadow:4px 0 20px rgba(0,0,0,0.5)}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center}
+    .nav{display:flex;flex-direction:column;gap:8px}
+    .nav a{display:flex;align-items:center;gap:10px;color:#9fb1cb;text-decoration:none;padding:10px;border-radius:10px}
+    .nav a.active,.nav a:hover{background:linear-gradient(90deg,rgba(255,176,32,0.08),transparent);color:var(--text)}
+    .main{flex:1;padding:20px 28px;overflow:auto}
+    h1{margin:0;color:var(--accent)}
+    .layout{display:grid;grid-template-columns:320px 1fr;gap:18px;margin-top:16px}
+    .card{background:var(--card);padding:16px;border-radius:12px;border:var(--glass-border);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+    input,select{width:100%;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);margin-top:6px}
+    .btn{padding:10px 12px;border-radius:10px;border:none;font-weight:600;cursor:pointer}
+    .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#0b0b0b;box-shadow:0 4px 14px rgba(255,176,32,0.2)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:left}
+    th{color:var(--muted)}
+    tr:hover{background:rgba(255,255,255,0.02)}
+    .actions button{margin-right:6px;padding:6px 8px;border-radius:8px;border:none;cursor:pointer;font-size:13px}
+    .delete{background:#ff6b6b20;color:#ff6b6b}
+    .edit{background:#ffc85a20;color:#ffc85a}
+    .summary{display:flex;gap:12px}
+    .summary .box{flex:1;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{display:none}}
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🏭</div>
+      <div>
+        <div style="font-weight:700;color:var(--accent)">LedgerOne</div>
+        <div style="font-size:12px;color:var(--muted)">AI Business Cockpit</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="./dashboard.html">🏠 Dashboard</a>
+      <a href="./inventory.html">📦 Inventory</a>
+      <a href="./customers.html">🧑‍🤝‍🧑 Customers</a>
+      <a href="./suppliers.html" class="active">🏭 Suppliers</a>
+      <a href="./finance.html">💰 Finance</a>
+      <a href="./ai-assist.html">🤖 AI Assist</a>
+      <a href="./settings.html">⚙️ Settings</a>
+    </nav>
+
+    <button id="btnLogout" class="btn" style="margin-top:auto;border:1px solid rgba(255,255,255,0.05);background:transparent;color:var(--text)">Logout</button>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h1>Suppliers</h1>
+      <div style="color:var(--muted)">Manage suppliers, payments & link to products</div>
+    </div>
+
+    <div class="layout">
+      <!-- Left: Add Supplier -->
+      <div class="card">
+        <h3>Add Supplier</h3>
+        <label for="sname">Name</label>
+        <input id="sname" placeholder="Example: ABC Traders" />
+
+        <label for="semail">Email</label>
+        <input id="semail" type="email" placeholder="supplier@email.com" />
+
+        <label for="sphone">Phone</label>
+        <input id="sphone" placeholder="1234567890" />
+
+        <label for="samount">Amount (₹)</label>
+        <input id="samount" type="number" step="0.01" placeholder="Amount you owe (positive = you owe)" />
+
+        <label for="stype">Type</label>
+        <select id="stype">
+          <option value="owe">You owe (payable)</option>
+          <option value="advance">Advance / Paid</option>
+        </select>
+
+        <button id="btnAdd" class="btn btn-primary" style="width:100%;margin-top:12px">Add Supplier</button>
+        <div id="msg" style="margin-top:10px;color:var(--muted);font-size:13px"></div>
+      </div>
+
+      <!-- Right: Suppliers list and summary -->
+      <div class="card">
+        <div class="summary" style="margin-bottom:12px">
+          <div class="box">
+            <div style="font-size:13px;color:var(--muted)">Total You Owe</div>
+            <div id="totalOwe" style="font-weight:700;font-size:18px">₹0</div>
+          </div>
+          <div class="box">
+            <div style="font-size:13px;color:var(--muted)">Total Advances / Paid</div>
+            <div id="totalPaid" style="font-weight:700;font-size:18px">₹0</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top:0">All Suppliers</h3>
+        <table id="suppliersTable">
+          <thead>
+            <tr><th>Name</th><th>Phone</th><th>Email</th><th>Amount</th><th>Type</th><th>Action</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { supabase } from '../../js/supabase.js';
+
+    // Elements
+    const sname = document.getElementById('sname');
+    const semail = document.getElementById('semail');
+    const sphone = document.getElementById('sphone');
+    const samount = document.getElementById('samount');
+    const stype = document.getElementById('stype');
+    const btnAdd = document.getElementById('btnAdd');
+    const msg = document.getElementById('msg');
+    const tbody = document.querySelector('#suppliersTable tbody');
+    const totalOweEl = document.getElementById('totalOwe');
+    const totalPaidEl = document.getElementById('totalPaid');
+    const logoutBtn = document.getElementById('btnLogout');
+
+    // Auth guard: redirect if no session
+    (async ()=>{
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) {
+        setTimeout(()=> window.location.href = '../../login.html', 700);
+        return;
+      }
+    })();
+
+    logoutBtn.onclick = async () => {
+      await supabase.auth.signOut();
+      window.location.href = '../../login.html';
+    };
+
+    // Load suppliers
+    async function loadSuppliers() {
+      msg.textContent = 'Loading...';
+      try {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          msg.textContent = 'Error loading suppliers: ' + error.message;
+          console.error(error);
+          return;
+        }
+        const suppliers = data || [];
+
+        // Fill table
+        tbody.innerHTML = suppliers.map(s => `
+          <tr data-id="${s.id}">
+            <td>${escapeHtml(s.name)}</td>
+            <td>${escapeHtml(s.phone || '-')}</td>
+            <td>${escapeHtml(s.email || '-')}</td>
+            <td>₹${Number(s.amount || 0).toLocaleString('en-IN')}</td>
+            <td>${s.type || '-'}</td>
+            <td class="actions">
+              <button class="edit" onclick="editSupplier('${s.id}')">Edit</button>
+              <button class="delete" onclick="deleteSupplier('${s.id}')">Delete</button>
+              <button style="padding:6px 8px;border-radius:8px;margin-left:6px" onclick="viewSupplier('${s.id}')">View</button>
+            </td>
+          </tr>`).join('');
+
+        // compute totals
+        let totalOwe = 0, totalPaid = 0;
+        suppliers.forEach(s => {
+          const amt = Number(s.amount || 0);
+          if ((s.type || 'owe') === 'owe') totalOwe += amt;
+          else totalPaid += amt;
+        });
+
+        totalOweEl.textContent = '₹' + totalOwe.toLocaleString('en-IN');
+        totalPaidEl.textContent = '₹' + totalPaid.toLocaleString('en-IN');
+        msg.textContent = '';
+      } catch (e) {
+        console.error(e);
+        msg.textContent = 'Unexpected error loading suppliers.';
+      }
+    }
+
+    // Add supplier
+    btnAdd.addEventListener('click', async () => {
+      msg.textContent = '';
+      const name = sname.value.trim();
+      const email = semail.value.trim();
+      const phone = sphone.value.trim();
+      const amount = parseFloat(samount.value) || 0;
+      const typeVal = stype.value || 'owe';
+
+      if (!name) { msg.textContent = 'Enter supplier name.'; return; }
+
+      // Insert
+      try {
+        const { data, error } = await supabase.from('suppliers').insert([
+          { name, email, phone, amount, type: typeVal }
+        ]).select();
+        if (error) {
+          msg.textContent = 'Error adding supplier: ' + error.message;
+          console.error(error);
+          return;
+        }
+        // success
+        msg.textContent = '✅ Supplier added';
+        sname.value = semail.value = sphone.value = samount.value = '';
+        stype.value = 'owe';
+        await loadSuppliers();
+      } catch (e) {
+        console.error(e);
+        msg.textContent = 'Unexpected error adding supplier.';
+      }
+    });
+
+    // Delete supplier
+    window.deleteSupplier = async (id) => {
+      if (!confirm('Delete this supplier?')) return;
+      try {
+        const { error } = await supabase.from('suppliers').delete().eq('id', id);
+        if (error) { alert('Error: ' + error.message); return; }
+        await loadSuppliers();
+      } catch (e) { console.error(e); alert('Unexpected error'); }
+    };
+
+    // Edit supplier (prompt-based quick editor)
+    window.editSupplier = async (id) => {
+      const { data, error } = await supabase.from('suppliers').select('*').eq('id', id).single();
+      if (error) { alert('Error fetching supplier: ' + error.message); return; }
+      const s = data;
+      const name = prompt('Name', s.name) || s.name;
+      const email = prompt('Email', s.email || '') || s.email;
+      const phone = prompt('Phone', s.phone || '') || s.phone;
+      const amount = prompt('Amount', s.amount || 0);
+      const typeVal = prompt('Type (owe/advance)', s.type || 'owe') || s.type;
+
+      const { error: updErr } = await supabase.from('suppliers').update({
+        name, email, phone, amount: Number(amount || 0), type: typeVal
+      }).eq('id', id);
+      if (updErr) { alert('Error updating: ' + updErr.message); return; }
+      await loadSuppliers();
+    };
+
+    // View supplier details (simple modal via prompt/alert)
+    window.viewSupplier = async (id) => {
+      const { data, error } = await supabase.from('suppliers').select('*').eq('id', id).single();
+      if (error) { alert('Error: ' + error.message); return; }
+      const s = data;
+      alert(`Supplier: ${s.name}\nEmail: ${s.email || '-'}\nPhone: ${s.phone || '-'}\nAmount: ₹${(s.amount||0).toLocaleString('en-IN')}\nType: ${s.type || '-'}`);
+    };
+
+    // small HTML escape
+    function escapeHtml(s){
+      if(!s) return '';
+      return String(s).replace(/[&<>"'`]/g, (c)=>({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'
+      })[c]);
+    }
+
+    // init
+    (async ()=> {
+      await loadSuppliers();
+    })();
+
+  </script>
+</body>
+</html>
