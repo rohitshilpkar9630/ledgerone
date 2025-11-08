@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LedgerOne - Customers</title>
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <style>
+    body {
+      display: flex;
+      background: #090d11;
+      color: var(--text);
+      font-family: Inter, system-ui;
+      height: 100vh;
+      overflow: hidden;
+    }
+    aside {
+      width: 240px;
+      background: #0c1217;
+      padding: 20px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    aside h2 {
+      font-size: 20px;
+      color: var(--accent);
+      margin-bottom: 30px;
+    }
+    aside ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    aside li {
+      padding: 10px 0;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    aside li:hover {
+      color: var(--accent);
+    }
+    main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    h1 {
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: var(--glass-border);
+      padding: 20px;
+      border-radius: 12px;
+      flex: 1;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text);
+    }
+    input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: #0b0b0b;
+      font-weight: bold;
+      margin-top: 15px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+      padding: 8px;
+    }
+    th {
+      color: var(--accent);
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .status-get { color: #32cd32; }
+    .status-give { color: #ff6347; }
+    #msg { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <aside>
+    <h2>LedgerOne</h2>
+    <ul>
+      <li onclick="window.location.href='dashboard.html'">🏠 Dashboard</li>
+      <li onclick="window.location.href='inventory.html'">📦 Inventory</li>
+      <li style="color:var(--accent)">👥 Customers</li>
+      <li onclick="window.location.href='suppliers.html'">🚚 Suppliers</li>
+      <li onclick="window.location.href='finance.html'">💰 Finance</li>
+      <li onclick="window.location.href='settings.html'">⚙️ Settings</li>
+    </ul>
+  </aside>
+
+  <main>
+    <h1>👥 Customers</h1>
+
+    <div class="container">
+      <!-- ADD CUSTOMER FORM -->
+      <div class="card">
+        <h3>Add Customer</h3>
+        <label>Name</label>
+        <input id="cname" type="text" placeholder="Customer name" />
+        <label>Email</label>
+        <input id="cemail" type="email" placeholder="example@email.com" />
+        <label>Phone</label>
+        <input id="cphone" type="text" placeholder="1234567890" />
+        <label>Amount (₹)</label>
+        <input id="camount" type="number" placeholder="Enter amount" />
+        <select id="ctype" style="margin-top:10px;width:100%;padding:10px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)">
+          <option value="get">You will get</option>
+          <option value="give">You will give</option>
+        </select>
+        <button id="btnAdd">Add Customer</button>
+        <div id="msg"></div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="card" style="flex:2">
+        <h3>All Customers</h3>
+        <table id="customersTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { supabase } from '../../js/supabase.js';
+
+    const cname = document.getElementById("cname");
+    const cemail = document.getElementById("cemail");
+    const cphone = document.getElementById("cphone");
+    const camount = document.getElementById("camount");
+    const ctype = document.getElementById("ctype");
+    const msg = document.getElementById("msg");
+    const tbody = document.querySelector("#customersTable tbody");
+    const btnAdd = document.getElementById("btnAdd");
+
+    // ✅ Load customers
+    async function loadCustomers() {
+      const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false });
+      if (error) {
+        msg.textContent = "❌ Error loading customers: " + error.message;
+        console.error(error);
+        return;
+      }
+      tbody.innerHTML = (data || [])
+        .map(
+          (c) => `
+          <tr>
+            <td>${c.name}</td>
+            <td>${c.email || "-"}</td>
+            <td>${c.phone || "-"}</td>
+            <td class="${c.type === "get" ? "status-get" : "status-give"}">${c.type}</td>
+            <td>₹${c.amount || 0}</td>
+            <td>${new Date(c.created_at).toLocaleDateString()}</td>
+            <td>
+              <button onclick="deleteCustomer('${c.id}')">🗑️</button>
+            </td>
+          </tr>`
+        )
+        .join("");
+    }
+
+    // ✅ Add new customer
+    btnAdd.addEventListener("click", async () => {
+      const name = cname.value.trim();
+      const email = cemail.value.trim();
+      const phone = cphone.value.trim();
+      const amount = parseFloat(camount.value);
+      const type = ctype.value;
+
+      if (!name || isNaN(amount)) {
+        msg.textContent = "⚠️ Enter valid name and amount";
+        return;
+      }
+
+      const { error } = await supabase.from("customers").insert([
+        { name, email, phone, amount, type }
+      ]);
+      if (error) {
+        msg.textContent = "❌ " + error.message;
+        console.error(error);
+      } else {
+        msg.textContent = "✅ Customer added!";
+        cname.value = cemail.value = cphone.value = camount.value = "";
+        loadCustomers();
+      }
+    });
+
+    // ✅ Delete
+    window.deleteCustomer = async (id) => {
+      if (!confirm("Delete this customer?")) return;
+      const { error } = await supabase.from("customers").delete().eq("id", id);
+      if (error) alert(error.message);
+      else loadCustomers();
+    };
+
+    loadCustomers();
+  </script>
+</body>
+</html>
