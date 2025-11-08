@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LedgerOne — Dashboard</title>
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <style>
+    :root { --sidebar-w: 240px; }
+    body {
+      margin: 0;
+      display: flex;
+      background: linear-gradient(180deg, #080a0c, #0e1217);
+      color: var(--text);
+      font-family: "Poppins", sans-serif;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: var(--sidebar-w);
+      background: linear-gradient(180deg, #090c10, #0b0f12);
+      padding: 20px;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, var(--accent), var(--accent-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #9fb1cb;
+      text-decoration: none;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .nav a.active,
+    .nav a:hover {
+      background: linear-gradient(90deg, rgba(255,176,32,0.08), transparent);
+      color: var(--text);
+    }
+    .main {
+      flex: 1;
+      padding: 24px 30px;
+      overflow-y: auto;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .ai-greeting {
+      background: rgba(255,255,255,0.02);
+      padding: 16px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid rgba(255,255,255,0.05);
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    }
+    .ai-greeting .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      background: linear-gradient(180deg,#fff,rgba(255,255,255,0.1));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: var(--glass-border);
+      padding: 18px;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    }
+    .card .label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .card .value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .action-btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.05);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .action-btn:hover {
+      background: rgba(255,255,255,0.05);
+      transform: scale(1.03);
+    }
+    .content-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .activity-feed {
+      max-height: 320px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .feed-item {
+      background: rgba(255,255,255,0.02);
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    @media (max-width: 980px) {
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .content-grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">📊</div>
+      <div>
+        <div style="font-weight:700;color:var(--accent)">LedgerOne</div>
+        <div style="font-size:12px;color:var(--muted)">AI Business Cockpit</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="./dashboard.html" class="active">🏠 Dashboard</a>
+      <a href="./inventory.html">📦 Inventory</a>
+      <a href="./customers.html">🧑‍🤝‍🧑 Customers</a>
+      <a href="./suppliers.html">🏭 Suppliers</a>
+      <a href="./finance.html">💰 Finance</a>
+      <a href="./ai-assist.html">🤖 AI Assist</a>
+      <a href="./settings.html">⚙️ Settings</a>
+      <a href="./account.html">👤 Account</a>
+    </nav>
+    <button id="btnLogout" class="btn-ghost" style="margin-top:auto;">Logout</button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="ai-greeting">
+        <div class="avatar">🤖</div>
+        <div>
+          <div id="greetLine" style="font-weight:700;">Hello...</div>
+          <div id="greetSub" style="font-size:13px;color:var(--muted);">Loading daily report...</div>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="user-pill">
+          <div id="userEmail" style="font-size:13px;color:var(--muted);">...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="action-btn">Scan</button>
+      <button class="action-btn">Add Transaction</button>
+      <button class="action-btn">Generate Bill</button>
+      <button class="action-btn">Add Staff</button>
+    </div>
+
+    <section class="kpis">
+      <div class="card"><div class="label">Revenue</div><div class="value" id="kRevenue">₹0</div></div>
+      <div class="card"><div class="label">Profit / Loss</div><div class="value" id="kProfit">₹0</div></div>
+      <div class="card"><div class="label">Pending Bills</div><div class="value" id="kPending">0</div></div>
+      <div class="card"><div class="label">Low Stock Items</div><div class="value" id="kLow">0</div></div>
+    </section>
+
+    <div class="content-grid">
+      <div class="card"><canvas id="revenueChart"></canvas></div>
+      <div class="card">
+        <div style="font-weight:700;">Live Activity</div>
+        <div class="activity-feed" id="feed"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- JS -->
+  <script type="module">
+    import { supabase, getCurrentSession } from '../../js/supabase.js';
+
+    async function initDashboard() {
+      const session = await getCurrentSession();
+
+      if (!session) {
+        console.warn("No active session found — redirecting...");
+        setTimeout(() => (window.location.href = "../../login.html"), 1000);
+        return;
+      }
+
+      const user = session.user;
+      document.getElementById("userEmail").textContent = user.email;
+      console.log("✅ Logged in as:", user.email);
+
+      // Load dashboard data
+      loadKPIs();
+      loadActivityFeed();
+      initChart();
+      rotateGreeting();
+    }
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[Auth Event]", event);
+      if (event === "SIGNED_OUT" || !session) {
+        window.location.href = "../../login.html";
+      }
+    });
+
+    document.getElementById("btnLogout").onclick = async () => {
+      await supabase.auth.signOut();
+      window.location.href = "../../login.html";
+    };
+
+    function loadKPIs() {
+      document.getElementById("kRevenue").textContent = "₹82,400";
+      document.getElementById("kProfit").textContent = "₹18,200";
+      document.getElementById("kPending").textContent = "2";
+      document.getElementById("kLow").textContent = "3";
+    }
+
+    function loadActivityFeed() {
+      const feed = document.getElementById("feed");
+      const data = [
+        "🧾 Invoice #1023 generated for Acme Pvt Ltd",
+        "📦 Blue Pens stock low (3 left)",
+        "💸 ₹2,000 paid to ABC Traders",
+        "👩‍💼 New staff added: Priya Sharma",
+      ];
+      feed.innerHTML = data
+        .map(item => `<div class="feed-item">${item}</div>`)
+        .join("");
+    }
+
+    function initChart() {
+      const ctx = document.getElementById("revenueChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["Week -4", "Week -3", "Week -2", "Week -1", "This Week"],
+          datasets: [
+            {
+              label: "Revenue",
+              data: [12000, 15000, 19000, 25000, 31000],
+              fill: true,
+              tension: 0.3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+        },
+      });
+    }
+
+    function rotateGreeting() {
+      const greet = document.getElementById("greetLine");
+      const sub = document.getElementById("greetSub");
+      const lines = [
+        { g: "Hey Aryan 👋", s: "Today's revenue up by 12%" },
+        { g: "All systems running smooth ⚙️", s: "3 items are in low stock" },
+        { g: "Here’s your quick business snapshot 📊", s: "2 bills pending approval" },
+      ];
+      let i = 0;
+      setInterval(() => {
+        greet.style.opacity = 0;
+        sub.style.opacity = 0;
+        setTimeout(() => {
+          greet.textContent = lines[i].g;
+          sub.textContent = lines[i].s;
+          greet.style.opacity = 1;
+          sub.style.opacity = 1;
+          i = (i + 1) % lines.length;
+        }, 300);
+      }, 4000);
+    }
+
+    initDashboard();
+  </script>
+</body>
+</html>
